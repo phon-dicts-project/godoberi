@@ -1,0 +1,110 @@
+---
+title: "Анализ годоберинского словаря"
+date: "1 февраля 2020"
+output: 
+  html_document:
+    number_sections: true
+editor_options: 
+  chunk_output_type: console
+---
+
+# Что я поменял в словаре
+
+## Вступление
+Я удалил грамматическое и описательное вступление и конвертировал ворд в html.
+
+## Палочка
+Палочка выделяется отдельным шрифтом и мешает распознавать заголовки. Так что случаи типа
+
+
+```
+<b>АБА*ДАЛ</b><font face="Times New Roman, serif"><b>I</b></font><b>И</b>
+```
+
+я заменил на 
+
+```
+<b>АБА*ДАЛIИ</b>
+```
+
+### Надписное н
+
+Надписное н может мешаться, так что случаи типа
+```
+<b>А</b><sup><b>Н</b></sup><b>ГIА*<b>
+```
+
+я заменил на
+
+```
+<b>АᴴГIА*<b>
+```
+
+При этом ᴴ -- латиница.
+
+### Звездочка
+
+Звездочка иногда может мешаться, так что случаи типа
+```
+<b>АВА</b>*<b>ДАНЛЪИ</b>
+```
+
+я заменил на
+
+```
+<b>АВАДАНЛЪИ</b>
+```
+
+### Пробел
+
+Пробел иногда попадает в теги <b>, так что случаи типа
+
+```
+<b>АВАРА*Г </b><font face="Times New Roman, serif">I</font>
+<b>АᴴВУ*ХАЛАМИ </b>(<b>аᴴвухала*ли, аᴴвухалала*, аᴴвухалалу*</b>)
+```
+
+я заменил на
+
+```
+<b>АВАРА*Г</b> <font face="Times New Roman, serif">I</font>
+<b>АᴴВУ*ХАЛАМИ</b> (<b>аᴴвухала*ли, аᴴвухалала*, аᴴвухалалу*</b>)
+```
+
+### Нестандартные символы
+
+`^` --- это долгота
+`*` --- это ударение
+
+Один раз вместо звездочки стояла скобка.
+
+```
+<b>САХА)ТА/Б</b> (<b>-л</b> <i>мн</i>. I, II) нездоровый
+```
+
+# Обработка `.html`
+
+```{r, message=FALSE}
+library(tidyverse)
+library(rvest)
+
+source <- read_html("../gododberi_russian.html")
+
+source %>% 
+  html_nodes("p") %>% 
+  tibble(source = .,
+         text = html_text(.)) %>% 
+  filter(text != "\n") %>% 
+  mutate(text = str_replace_all(text, "\n", " "),
+         text = str_replace_all(text, "\\s{2,}", " "),
+         text = str_replace_all(text, "$ ", ""),
+         text = str_replace_all(text, " ^", ""),
+         lemma = source %>%  html_node("b") %>% html_text(),
+         morphology = str_extract(text, "\\(.*?\\)"),
+         definition = str_remove(text, lemma),
+         source = as.character(source),
+         id = 1:n()) %>% 
+  select(id, lemma, morphology, definition, text, source) %>%  
+  write_csv("../godoberi_dict.csv", na = "")
+```
+
