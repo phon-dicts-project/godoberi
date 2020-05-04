@@ -362,7 +362,7 @@ summary {
 
 
 <h1 class="title toc-ignore">Анализ годоберинского словаря</h1>
-<h4 class="date">1 февраля 2020</h4>
+<h4 class="date">4 февраля 2020</h4>
 
 </div>
 
@@ -416,24 +416,62 @@ summary {
 <pre class="r"><code>library(tidyverse)
 library(rvest)
 
-source &lt;- read_html(&quot;../gododberi_russian.html&quot;)
+source &lt;- read_lines(&quot;../gododberi_russian2.html&quot;)
 
-source %&gt;% 
-  html_nodes(&quot;p&quot;) %&gt;% 
-  tibble(source = .,
-         text = html_text(.)) %&gt;% 
-  filter(text != &quot;\n&quot;) %&gt;% 
-  mutate(text = str_replace_all(text, &quot;\n&quot;, &quot; &quot;),
+tibble(source) %&gt;% 
+  mutate(source = str_remove_all(source, &quot;&lt;/?span.*?&gt;&quot;),
+         source = str_remove_all(source, &quot;&lt;/?font.*?&gt;&quot;),
+         source = str_replace_all(source, &#39;Ì&#39;, &#39;О\\^\\*&#39;),
+         source = str_replace_all(source, &#39;&lt;/b&gt;&lt;sup&gt;&lt;b&gt;Н&lt;/b&gt;&lt;/sup&gt;&lt;b&gt;&#39;, &#39;ᴴ&#39;),
+         source = str_replace_all(source, &#39;&lt;/b&gt;&lt;sup&gt;&lt;b&gt;Н&lt;/b&gt;&lt;/sup&gt;&#39;, &#39;ᴴ&lt;/b&gt;&#39;),
+         source = str_replace_all(source, &#39;µ&#39;, &#39;У\\*&#39;),
+         source = str_replace_all(source, &#39;ò&#39;, &#39;Я\\*&#39;),
+         source = str_replace_all(source, &#39;«&#39;, &#39;э\\*&#39;),
+         source = str_replace_all(source, &#39;ë&#39;, &#39;э\\^\\*&#39;),
+         source = str_replace_all(source, &#39;R&#39;, &#39;И\\*&#39;),
+         source = str_replace_all(source, &#39;S&#39;, &#39;и\\*&#39;),
+         source = str_replace_all(source, &quot;²&quot;, &#39;Э\\*&#39;),
+         source = str_replace_all(source, &quot;¬&quot;, &#39;Э\\^\\*&#39;),
+         source = str_replace_all(source, &#39;\\^&#39;, &#39;̄&#39;),
+         source = str_replace_all(source, &#39;\\*&#39;, &#39;́&#39;),
+         source = str_replace_all(source, &#39; &lt;/b&gt;&#39;, &#39;&lt;/b&gt; &#39;),
+         source = str_replace_all(source, &#39;&lt;b&gt; &#39;, &#39; &lt;b&gt;&#39;),
+         source = str_remove_all(source, &#39;&lt;/b&gt;&lt;b&gt;&#39;)
+         ) %&gt;% 
+  unlist() %&gt;%
+  paste(collapse = &quot; &quot;) %&gt;% 
+  write_lines(&quot;../gododberi_russian2test.html&quot;)
+
+html_file &lt;- read_html(&quot;../gododberi_russian2test.html&quot;)
+
+html_file %&gt;% 
+  html_nodes(&quot;p&quot;) %&gt;%
+  {tibble(text = html_text(.),
+          source = as.character(.))} -&gt;
+  t
+
+html_file %&gt;% 
+  html_nodes(&quot;p&quot;) %&gt;%
+  html_node(&quot;b&quot;) %&gt;%
+  html_text() %&gt;% 
+  enframe() %&gt;% 
+  rename(id = name,
+         lemma = value) %&gt;% 
+  bind_cols(t) %&gt;% 
+  mutate(text = str_replace_all(text, &quot;\t&quot;, &quot; &quot;),
          text = str_replace_all(text, &quot;\\s{2,}&quot;, &quot; &quot;),
          text = str_replace_all(text, &quot;$ &quot;, &quot;&quot;),
          text = str_replace_all(text, &quot; ^&quot;, &quot;&quot;),
-         lemma = source %&gt;%  html_node(&quot;b&quot;) %&gt;% html_text(),
-         morphology = str_extract(text, &quot;\\(.*?\\)&quot;),
-         definition = str_remove(text, lemma),
-         source = as.character(source),
-         id = 1:n()) %&gt;% 
-  select(id, lemma, morphology, definition, text, source) %&gt;%  
-  write_csv(&quot;../godoberi_dict.csv&quot;, na = &quot;&quot;)</code></pre>
+         lemma = str_replace_all(lemma, &quot;\t&quot;, &quot; &quot;),
+         lemma = str_replace_all(lemma, &quot;\\s{2,}&quot;, &quot; &quot;),
+         lemma = str_replace_all(lemma, &quot;$ &quot;, &quot;&quot;),
+         lemma = str_replace_all(lemma, &quot; ^&quot;, &quot;&quot;),
+         lemma = str_remove(lemma, &quot; \\(.*&quot;),
+         definition = str_sub(text, str_length(lemma)+2, str_length(text)), # thx to Dasha!
+         definition = str_remove(definition, &quot;^\\s{1,}&quot;),
+         morphology = str_extract(definition, &quot;\\(.*?\\)&quot;)) %&gt;% 
+  select(id, lemma, morphology, definition, text, source) %&gt;% 
+  write_csv(&quot;../godoberi_dict2.csv&quot;, na = &quot;&quot;)</code></pre>
 </div>
 
 

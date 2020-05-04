@@ -1,6 +1,6 @@
 ---
 title: "Анализ годоберинского словаря"
-date: "1 февраля 2020"
+date: "4 февраля 2020"
 output: 
   html_document:
     number_sections: true
@@ -15,7 +15,6 @@ editor_options:
 
 ## Палочка
 Палочка выделяется отдельным шрифтом и мешает распознавать заголовки. Так что случаи типа
-
 
 ```
 <b>АБА*ДАЛ</b><font face="Times New Roman, serif"><b>I</b></font><b>И</b>
@@ -88,23 +87,61 @@ editor_options:
 library(tidyverse)
 library(rvest)
 
-source <- read_html("../gododberi_russian.html")
+source <- read_lines("../gododberi_russian2.html")
 
-source %>% 
-  html_nodes("p") %>% 
-  tibble(source = .,
-         text = html_text(.)) %>% 
-  filter(text != "\n") %>% 
-  mutate(text = str_replace_all(text, "\n", " "),
+tibble(source) %>% 
+  mutate(source = str_remove_all(source, "</?span.*?>"),
+         source = str_remove_all(source, "</?font.*?>"),
+         source = str_replace_all(source, 'Ì', 'О\\^\\*'),
+         source = str_replace_all(source, '</b><sup><b>Н</b></sup><b>', 'ᴴ'),
+         source = str_replace_all(source, '</b><sup><b>Н</b></sup>', 'ᴴ</b>'),
+         source = str_replace_all(source, 'µ', 'У\\*'),
+         source = str_replace_all(source, 'ò', 'Я\\*'),
+         source = str_replace_all(source, '«', 'э\\*'),
+         source = str_replace_all(source, 'ë', 'э\\^\\*'),
+         source = str_replace_all(source, 'R', 'И\\*'),
+         source = str_replace_all(source, 'S', 'и\\*'),
+         source = str_replace_all(source, "²", 'Э\\*'),
+         source = str_replace_all(source, "¬", 'Э\\^\\*'),
+         source = str_replace_all(source, '\\^', '̄'),
+         source = str_replace_all(source, '\\*', '́'),
+         source = str_replace_all(source, ' </b>', '</b> '),
+         source = str_replace_all(source, '<b> ', ' <b>'),
+         source = str_remove_all(source, '</b><b>')
+         ) %>% 
+  unlist() %>%
+  paste(collapse = " ") %>% 
+  write_lines("../gododberi_russian2test.html")
+
+html_file <- read_html("../gododberi_russian2test.html")
+
+html_file %>% 
+  html_nodes("p") %>%
+  {tibble(text = html_text(.),
+          source = as.character(.))} ->
+  t
+
+html_file %>% 
+  html_nodes("p") %>%
+  html_node("b") %>%
+  html_text() %>% 
+  enframe() %>% 
+  rename(id = name,
+         lemma = value) %>% 
+  bind_cols(t) %>% 
+  mutate(text = str_replace_all(text, "\t", " "),
          text = str_replace_all(text, "\\s{2,}", " "),
          text = str_replace_all(text, "$ ", ""),
          text = str_replace_all(text, " ^", ""),
-         lemma = source %>%  html_node("b") %>% html_text(),
-         morphology = str_extract(text, "\\(.*?\\)"),
-         definition = str_remove(text, lemma),
-         source = as.character(source),
-         id = 1:n()) %>% 
-  select(id, lemma, morphology, definition, text, source) %>%  
-  write_csv("../godoberi_dict.csv", na = "")
+         lemma = str_replace_all(lemma, "\t", " "),
+         lemma = str_replace_all(lemma, "\\s{2,}", " "),
+         lemma = str_replace_all(lemma, "$ ", ""),
+         lemma = str_replace_all(lemma, " ^", ""),
+         lemma = str_remove(lemma, " \\(.*"),
+         definition = str_sub(text, str_length(lemma)+2, str_length(text)), # thx to Dasha!
+         definition = str_remove(definition, "^\\s{1,}"),
+         morphology = str_extract(definition, "\\(.*?\\)")) %>% 
+  select(id, lemma, morphology, definition, text, source) %>% 
+  write_csv("../godoberi_dict2.csv", na = "")
 ```
 
