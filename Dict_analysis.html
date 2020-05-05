@@ -368,7 +368,52 @@ summary {
 </div>
 
 
-
+<pre class="r"><code>library(tidyverse)
+godoberi &lt;- read_csv(&quot;../godoberi_dict_v2.csv&quot;)
+godoberi</code></pre>
+<pre><code>## # A tibble: 5,719 x 6
+##       id lemma    morphology    bor definition              source              
+##    &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;                   &lt;chr&gt;               
+##  1     1 АБÁДАЛIИ &lt;NA&gt;           NA нареч. 1) никогда; аба… &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+##  2     2 АБÁДИЛ-… &lt;NA&gt;           NA то же, что абáдалIи     &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+##  3     3 АБАЗИ́Н…  (-щуб)          1 I (-щуб) абазинец       &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+##  4     4 АБАЗИ́Н…  (-лълъилIи)     1 II (-лълъилIи) абазинка &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+##  5     5 АБАЗИ́Н…  (-рдуб)         1 (-рдуб) абазины; абази… &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+##  6     6 АБТÁБУС… (-улIи, -а…     1 III (-улIи, -абе) авто… &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+##  7     7 АБТАРУ́…  (-лIи, -бé)     1 III (-лIи, -бé) автору… &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+##  8     8 АБТÉКА   (-лIи, -бé)     1 III (-лIи, -бé) аптека… &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+##  9     9 АБХÁЗА/В (-щуб)          1 I (-щуб) абхазец        &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+## 10    10 АБХÁЗА/Й (-лълъилIи)     1 II (-лълъилIи) абхазка  &quot;&lt;p lang=\&quot;ru-И́U\&quot;… 
+## # … with 5,709 more rows</code></pre>
+<p>Некоторые слова в словаре имеют два варианта, например <code>БАЖÁРИ //  БАЖЕ̄́Р</code>. Эти случаи следует разнести на разные строчки. Отсортируем заимствования (размечены вручную), суффиксы, слова, многословные входы из селения Зибирхали и косвенные формы.</p>
+<pre class="r"><code>godoberi %&gt;% 
+  separate(lemma, into = c(&quot;lemma1&quot;, &quot;lemma2&quot;), sep = &quot; // &quot;, fill = &quot;right&quot;) %&gt;% 
+  pivot_longer(names_to = &#39;lem_n&#39;, values_to = &quot;lemma&quot;, lemma1:lemma2) %&gt;% 
+  select(-lem_n) %&gt;% 
+  filter(is.na(bor), # заимствования
+         !str_detect(lemma, &quot;^-&quot;), # суффиксы
+         !str_detect(lemma, &quot;\\s&quot;), # многословные входы
+         !str_detect(lemma, &quot;\\S//\\S&quot;), # многословные входы
+         !str_detect(definition, &quot;^\\(?зиб.\\)? см.&quot;), # Зибирхали
+         !str_detect(definition, &quot;^.{4} п. от &quot;) # косвенные формы
+         ) %&gt;% 
+  mutate(lemma = str_to_upper(lemma),
+         lemma = str_remove(lemma, &quot;\\!$&quot;), # конечный восклицательный знак
+         lemma = str_remove(lemma, &quot;\\?$&quot;) # конечный выпросительный знак
+         ) -&gt; 
+  godoberi</code></pre>
+<p>Получилось 4948 слов, уникальных слов 4911. Проанализируем какие символы встречаются в нашем словаре:</p>
+<pre class="r"><code>library(tidytext)
+godoberi %&gt;% 
+  unnest_tokens(output = &quot;letter&quot;, lemma, token = &quot;characters&quot;, to_lower = FALSE) %&gt;% 
+  count(letter) %&gt;% 
+  pull(letter)</code></pre>
+<pre><code>##  [1] &quot;Á&quot; &quot;Ā&quot; &quot;É&quot; &quot;Ē&quot; &quot;ᴴ&quot; &quot;I&quot; &quot;Ó&quot; &quot;Ō&quot; &quot;А&quot; &quot;А̄́&quot; &quot;Б&quot; &quot;В&quot; &quot;Г&quot; &quot;Д&quot; &quot;Е&quot; &quot;Е̄́&quot; &quot;Ж&quot; &quot;З&quot; &quot;И&quot;
+## [20] &quot;И́&quot; &quot;Ӣ&quot; &quot;Ӣ́&quot; &quot;Й&quot; &quot;К&quot; &quot;Л&quot; &quot;М&quot; &quot;Н&quot; &quot;О&quot; &quot;О̄́&quot; &quot;П&quot; &quot;Р&quot; &quot;С&quot; &quot;Т&quot; &quot;У&quot; &quot;У́&quot; &quot;Ӯ&quot; &quot;Ӯ́&quot; &quot;Х&quot;
+## [39] &quot;Ц&quot; &quot;Ч&quot; &quot;Ш&quot; &quot;Щ&quot; &quot;Ъ&quot; &quot;Ь&quot; &quot;Э&quot; &quot;Э́&quot; &quot;Э̄́&quot; &quot;Я&quot; &quot;Я́&quot; &quot;Я̄́&quot;</code></pre>
+<p>Каждого гласного должно быть максимум по 4 (безударный, ударный, долгий, долгий ударный). То, что <code>А</code>, <code>Е</code> и <code>О</code> отсортировались отдельно означает, что перед нами латинские буквы. Напишем правила преобразования в IPA:</p>
+<pre class="r"><code>godoberi %&gt;% 
+  mutate(IPA = str_replace_all())</code></pre>
 
 
 

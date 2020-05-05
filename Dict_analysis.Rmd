@@ -1,5 +1,51 @@
 ---
 title: "Godoberi Dictonary analysis"
 author: "G. Moroz"
+editor_options: 
+  chunk_output_type: console
 ---
+
+```{r,message=FALSE}
+library(tidyverse)
+godoberi <- read_csv("../godoberi_dict_v2.csv")
+godoberi
+```
+
+Некоторые слова в словаре имеют два варианта, например `БАЖÁРИ //  БАЖЕ̄́Р`. Эти случаи следует разнести на разные строчки. Отсортируем заимствования (размечены вручную), суффиксы, слова, многословные входы из селения Зибирхали и косвенные формы.
+
+```{r}
+godoberi %>% 
+  separate(lemma, into = c("lemma1", "lemma2"), sep = " // ", fill = "right") %>% 
+  pivot_longer(names_to = 'lem_n', values_to = "lemma", lemma1:lemma2) %>% 
+  select(-lem_n) %>% 
+  filter(is.na(bor), # заимствования
+         !str_detect(lemma, "^-"), # суффиксы
+         !str_detect(lemma, "\\s"), # многословные входы
+         !str_detect(lemma, "\\S//\\S"), # многословные входы
+         !str_detect(definition, "^\\(?зиб.\\)? см."), # Зибирхали
+         !str_detect(definition, "^.{4} п. от ") # косвенные формы
+         ) %>% 
+  mutate(lemma = str_to_upper(lemma),
+         lemma = str_remove(lemma, "\\!$"), # конечный восклицательный знак
+         lemma = str_remove(lemma, "\\?$") # конечный выпросительный знак
+         ) -> 
+  godoberi
+```
+
+Получилось `r nrow(godoberi)` слов, уникальных слов `r length(unique(godoberi$id))`. Проанализируем какие символы встречаются в нашем словаре:
+
+```{r}
+library(tidytext)
+godoberi %>% 
+  unnest_tokens(output = "letter", lemma, token = "characters", to_lower = FALSE) %>% 
+  count(letter) %>% 
+  pull(letter)
+```
+
+Каждого гласного должно быть максимум по 4 (безударный, ударный, долгий, долгий ударный). То, что `А`, `Е` и `О` отсортировались отдельно означает, что перед нами латинские буквы. Напишем правила преобразования в IPA:
+
+```{r, eval = FALSE}
+godoberi %>% 
+  mutate(IPA = str_replace_all())
+```
 
