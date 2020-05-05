@@ -427,11 +427,8 @@ godoberi %&gt;%
          lemma2 = str_replace_all(lemma2, &quot;Ō&quot;, &quot;ОD&quot;),
          lemma2 = str_replace_all(lemma2, &quot;DSᴴ&quot;, &quot;ᴴDS&quot;),
          lemma2 = str_replace_all(lemma2, &quot;Dᴴ&quot;, &quot;ᴴD&quot;),
-         lemma2 = str_replace_all(lemma2, &quot;Sᴴ&quot;, &quot;ᴴS&quot;)
-         ) -&gt;
-  godoberi</code></pre>
-<pre class="r"><code>godoberi %&gt;% 
-  mutate(IPA = str_replace_all(lemma2, &quot;ЛЪЛЪ&quot;, &quot;-ɬː-&quot;),
+         lemma2 = str_replace_all(lemma2, &quot;Sᴴ&quot;, &quot;ᴴS&quot;),
+         IPA = str_replace_all(lemma2, &quot;ЛЪЛЪ&quot;, &quot;-ɬː-&quot;),
          IPA = str_replace_all(IPA, &quot;ЦIЦI&quot;, &quot;-tsː-&quot;),
          IPA = str_replace_all(IPA, &quot;хIхI&quot;, &quot;-ħː-&quot;),
          IPA = str_replace_all(IPA, &quot;(?&lt;=(Г|К|КК|КI|ХЬ))Еᴴ&quot;, &quot;-ʲ-ẽ-&quot;),
@@ -502,9 +499,9 @@ godoberi %&gt;%
          IPA = str_replace_all(IPA, &quot;Ъ&quot;, &quot;-ʔ-&quot;),
          IPA = str_replace_all(IPA, &quot;-{2,}&quot;, &quot;-&quot;),
          IPA = str_remove(IPA, &quot;^-&quot;),
-         IPA = str_remove(IPA, &quot;-$&quot;),
-         ) -&gt;
+         IPA = str_remove(IPA, &quot;-$&quot;)) -&gt;
   godoberi_ipa
+
 godoberi_ipa %&gt;% 
   select(lemma, IPA)</code></pre>
 <pre><code>## # A tibble: 5,020 x 2

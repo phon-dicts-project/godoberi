@@ -60,16 +60,8 @@ godoberi %>%
          lemma2 = str_replace_all(lemma2, "Ō", "ОD"),
          lemma2 = str_replace_all(lemma2, "DSᴴ", "ᴴDS"),
          lemma2 = str_replace_all(lemma2, "Dᴴ", "ᴴD"),
-         lemma2 = str_replace_all(lemma2, "Sᴴ", "ᴴS")
-         ) ->
-  godoberi
-```
-
-
-
-```{r}
-godoberi %>% 
-  mutate(IPA = str_replace_all(lemma2, "ЛЪЛЪ", "-ɬː-"),
+         lemma2 = str_replace_all(lemma2, "Sᴴ", "ᴴS"),
+         IPA = str_replace_all(lemma2, "ЛЪЛЪ", "-ɬː-"),
          IPA = str_replace_all(IPA, "ЦIЦI", "-tsː-"),
          IPA = str_replace_all(IPA, "хIхI", "-ħː-"),
          IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))Еᴴ", "-ʲ-ẽ-"),
@@ -140,9 +132,9 @@ godoberi %>%
          IPA = str_replace_all(IPA, "Ъ", "-ʔ-"),
          IPA = str_replace_all(IPA, "-{2,}", "-"),
          IPA = str_remove(IPA, "^-"),
-         IPA = str_remove(IPA, "-$"),
-         ) ->
+         IPA = str_remove(IPA, "-$")) ->
   godoberi_ipa
+
 godoberi_ipa %>% 
   select(lemma, IPA)
 ```
