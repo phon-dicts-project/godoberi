@@ -15,8 +15,8 @@ godoberi
 
 ```{r}
 godoberi %>% 
-  separate(lemma, into = c("lemma1", "lemma2"), sep = " // ", fill = "right") %>% 
-  pivot_longer(names_to = 'lem_n', values_to = "lemma", lemma1:lemma2) %>% 
+  separate(lemma, into = c("lemma1", "lemma"), sep = " // ", fill = "right") %>% 
+  pivot_longer(names_to = 'lem_n', values_to = "lemma", lemma1:lemma) %>% 
   select(-lem_n) %>% 
   filter(is.na(bor), # заимствования
          !str_detect(lemma, "^-"), # суффиксы
@@ -26,6 +26,10 @@ godoberi %>%
          !str_detect(definition, "^.{4} п. от ") # косвенные формы
          ) %>% 
   mutate(lemma = str_to_upper(lemma),
+         lemma = str_remove_all(lemma, "-"),
+         lemma = str_remove_all(lemma, "/"),
+         lemma = str_remove(lemma, "\\("),
+         lemma = str_remove(lemma, "\\)"),
          lemma = str_remove(lemma, "\\!$"), # конечный восклицательный знак
          lemma = str_remove(lemma, "\\?$") # конечный выпросительный знак
          ) -> 
@@ -44,8 +48,120 @@ godoberi %>%
 
 Каждого гласного должно быть максимум по 4 (безударный, ударный, долгий, долгий ударный). То, что `А`, `Е` и `О` отсортировались отдельно означает, что перед нами латинские буквы. Напишем правила преобразования в IPA:
 
-```{r, eval = FALSE}
+```{r}
 godoberi %>% 
-  mutate(IPA = str_replace_all())
+  mutate(lemma2 = str_replace_all(lemma, "́", "S"),
+         lemma2 = str_replace_all(lemma2, "̄", "D"),
+         lemma2 = str_replace_all(lemma2, "Á", "АS"),
+         lemma2 = str_replace_all(lemma2, "Ā", "АD"),
+         lemma2 = str_replace_all(lemma2, "É", "ЕS"),
+         lemma2 = str_replace_all(lemma2, "Ē", "ЕD"),
+         lemma2 = str_replace_all(lemma2, "Ó", "ОS"),
+         lemma2 = str_replace_all(lemma2, "Ō", "ОD"),
+         lemma2 = str_replace_all(lemma2, "DSᴴ", "ᴴDS"),
+         lemma2 = str_replace_all(lemma2, "Dᴴ", "ᴴD"),
+         lemma2 = str_replace_all(lemma2, "Sᴴ", "ᴴS")
+         ) ->
+  godoberi
 ```
 
+
+
+```{r}
+godoberi %>% 
+  mutate(IPA = str_replace_all(lemma2, "ЛЪЛЪ", "-ɬː-"),
+         IPA = str_replace_all(IPA, "ЦIЦI", "-tsː-"),
+         IPA = str_replace_all(IPA, "хIхI", "-ħː-"),
+         IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))Еᴴ", "-ʲ-ẽ-"),
+         IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))Иᴴ", "-ʲ-ĩ-"),
+         IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))Яᴴ", "-ʲ-ã-"),
+         IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))Е", "-ʲ-e-"),
+         IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))И", "-ʲ-i-"),
+         IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))Я", "-ʲ-a-"),
+         IPA = str_replace_all(IPA, "А", "-a-"),
+         IPA = str_replace_all(IPA, "Е", "-e-"),
+         IPA = str_replace_all(IPA, "И", "-i-"),
+         IPA = str_replace_all(IPA, "О", "-o-"),
+         IPA = str_replace_all(IPA, "У", "-u-"),
+         IPA = str_replace_all(IPA, "Э", "-e-"),
+         IPA = str_replace_all(IPA, "-D", "D-"),
+         IPA = str_replace_all(IPA, "-S", "S-"),
+         IPA = str_replace_all(IPA, "-D-S", "DS-"),
+         IPA = str_replace_all(IPA, "-ᴴ", "ᴴ"),
+         IPA = str_replace_all(IPA, "aᴴ", "ã"),
+         IPA = str_replace_all(IPA, "eᴴ", "ẽ"),
+         IPA = str_replace_all(IPA, "iᴴ", "ĩ"),
+         IPA = str_replace_all(IPA, "oᴴ", "õ"),
+         IPA = str_replace_all(IPA, "uᴴ", "ũ"),
+         IPA = str_replace_all(IPA, "eᴴ", "ẽ"),
+         IPA = str_replace_all(IPA, "D", "ː"),
+         IPA = str_replace_all(IPA, "S", "*"), # ударение обозначаю звездочкой
+         IPA = str_replace_all(IPA, "ГЪ", "-ʁ-"),
+         IPA = str_replace_all(IPA, "ГЬ", "-h-"),
+         IPA = str_replace_all(IPA, "ГI", "-ʕ-"),
+         IPA = str_replace_all(IPA, "ДЖ", "-dʒ-"),
+         IPA = str_replace_all(IPA, "КЪ", "-q'-"),
+         IPA = str_replace_all(IPA, "КЬ", "-tɬ'-"),
+         IPA = str_replace_all(IPA, "КI", "-k'-"),
+         IPA = str_replace_all(IPA, "ЛЪ", "-ɬ-"),
+         IPA = str_replace_all(IPA, "ЛI", "-tɬ-"),
+         IPA = str_replace_all(IPA, "ЛI", "-tɬ-"),
+         IPA = str_replace_all(IPA, "СС", "-sː-"),
+         IPA = str_replace_all(IPA, "ТI", "-t'-"),
+         IPA = str_replace_all(IPA, "ХХ", "-χː-"),
+         IPA = str_replace_all(IPA, "ХЪ", "-qχ-"),
+         IPA = str_replace_all(IPA, "ХЬ", "-x-"),
+         IPA = str_replace_all(IPA, "ХI", "-ħ-"),
+         IPA = str_replace_all(IPA, "ЦЦ", "-tsː-"),
+         IPA = str_replace_all(IPA, "ЦI", "-ts'-"),
+         IPA = str_replace_all(IPA, "ЧЧ", "-tʃː-"),
+         IPA = str_replace_all(IPA, "ЧI", "-tʃ'-"),
+         IPA = str_replace_all(IPA, "Б", "-b-"),
+         IPA = str_replace_all(IPA, "В", "-w-"),
+         IPA = str_replace_all(IPA, "Г", "-ɡ-"),
+         IPA = str_replace_all(IPA, "Д", "-d-"),
+         IPA = str_replace_all(IPA, "Й", "-j-"),
+         IPA = str_replace_all(IPA, "Ж", "-ʒ-"),
+         IPA = str_replace_all(IPA, "З", "-z-"),
+         IPA = str_replace_all(IPA, "К", "-k-"),
+         IPA = str_replace_all(IPA, "Л", "-l-"),
+         IPA = str_replace_all(IPA, "М", "-m-"),
+         IPA = str_replace_all(IPA, "Н", "-n-"),
+         IPA = str_replace_all(IPA, "П", "-p-"),
+         IPA = str_replace_all(IPA, "Р", "-r-"),
+         IPA = str_replace_all(IPA, "С", "-s-"),
+         IPA = str_replace_all(IPA, "Т", "-t-"),
+         IPA = str_replace_all(IPA, "Т", "-t-"),
+         IPA = str_replace_all(IPA, "Х", "-χ-"),
+         IPA = str_replace_all(IPA, "Ц", "-ts-"),
+         IPA = str_replace_all(IPA, "Ч", "-tʃ-"),
+         IPA = str_replace_all(IPA, "Ш", "-ʃ-"),
+         IPA = str_replace_all(IPA, "Щ", "-ʃː-"),
+         IPA = str_replace_all(IPA, "Ъ", "-ʔ-"),
+         IPA = str_replace_all(IPA, "-{2,}", "-"),
+         IPA = str_remove(IPA, "^-"),
+         IPA = str_remove(IPA, "-$"),
+         ) ->
+  godoberi_ipa
+godoberi_ipa %>% 
+  select(lemma, IPA)
+```
+
+Давайте убедимся, что не осталось никаких ошибок. Посмотрим, какие звуки у нас получились:
+
+```{r}
+godoberi_ipa %>% 
+  unnest_tokens("sound", IPA, token = stringr::str_split, pattern = "-", to_lower = FALSE) %>% 
+  count(sound) %>% 
+  pull(sound)  
+```
+
+Вот у нас и получилась система звуков. Можно проанализировать их частотность:
+
+```{r}
+godoberi_ipa %>% 
+  unnest_tokens("sound", IPA, token = stringr::str_split, pattern = "-", to_lower = FALSE) %>% 
+  count(sound, sort = TRUE)
+```
+
+Полученное можно разделить на гласные и согласные, посчитать долю, которую и можно записать в стандартный чарт согласных и гласных. Также можно сделать визуализацию, где размером символа показать частотность. Теперь мы готовы перейти к анализу слоговой структуры.
