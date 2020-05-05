@@ -1,5 +1,5 @@
 ---
-title: "Анализ годоберинского словаря"
+title: "Godoberi Dictonary creation"
 date: "4 февраля 2020"
 output: 
   html_document:

@@ -1,0 +1,7 @@
+---
+title: "Godoberi Syllable Structure Analysis"
+author: "G. Moroz"
+---
+
+* [dictionary creation](https://phon-dicts-project.github.io/godoberi/Dict_creation.html)
+* [dictionary analysis](https://phon-dicts-project.github.io/godoberi/Dict_analysis.html)
