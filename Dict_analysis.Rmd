@@ -369,7 +369,6 @@ godoberi_ipa %>%
   count(n_syllables, stressed) %>% 
   na.omit() %>% 
   mutate(n_syllables = str_c(n_syllables, "-syllable")) %>% 
-  
   ggplot(aes(stressed, n))+
   geom_col(position = "dodge")+
   facet_wrap(~n_syllables, scales = "free_y")+
