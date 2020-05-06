@@ -9,6 +9,7 @@ editor_options:
 
 ```{r,message=FALSE}
 library(tidyverse)
+theme_set(theme_bw())
 godoberi <- read_csv("../godoberi_dict_v2.csv")
 godoberi
 ```
@@ -27,6 +28,8 @@ godoberi %>%
          !str_detect(definition, "^\\(?зиб.\\)? см."), # Зибирхали
          !str_detect(definition, "звукоподр"), # Звукоподражания
          !str_detect(definition, "возглас, которым"), # Звукоподражания
+         !str_detect(definition, "отгонный возглас"), # Звукоподражания
+         !str_detect(definition, "подзывной клич"), # Звукоподражания
          !str_detect(definition, "^.{4} п. от ") # косвенные формы
          ) %>% 
   mutate(lemma = str_to_upper(lemma),
@@ -177,30 +180,159 @@ godoberi_ipa %>%
 Вот у нас и получилась система звуков. Можно проанализировать их частотность:
 
 ```{r}
+library(DT)
 godoberi_ipa %>% 
   unnest_tokens("sound", IPA, token = stringr::str_split, pattern = "-", to_lower = FALSE) %>% 
   count(sound, sort = TRUE) %>% 
-  DT::datatable()
+  datatable()
 ```
 
 Полученное можно разделить на гласные и согласные, посчитать долю, которую и можно записать в стандартный чарт согласных и гласных. Также можно сделать визуализацию, где размером символа показать частотность. Теперь мы готовы перейти к анализу слоговой структуры.
 
 ## Анализ слоговой структуры
 
-```{r, eval=FALSE}
-nasalization <- "̃"
-vowels <- str_c("[auieo]", nasalization, "?ː?\\*?")
+```{r}
+vowels <- str_c("([auieo]̃?ː?\\*?)")
+not_vowels <- str_c("([^auieo]̃?ː?\\*?)")
 godoberi_ipa %>% 
   mutate(initial = str_extract(IPA, str_c("^.*?", vowels)),
          initial_vowel = str_extract(initial, vowels),
          initial = str_remove(initial, str_c("-?", vowels, ".*")),
          initial = ifelse(initial == "", "#", initial),
-         initial_length = str_count(initial, "-")+1) %>% 
-  #        final = str_extract(IPA, "[auieo][^auieo]*$"),
-  #        final_vowel = str_extract(final, "[auieo]"),
-  #        final = ifelse(str_detect(final, "-"), 
-  #                       str_remove(final, "[auieo].*?-"), 
-  #                       "#")) %>% 
-  View()
+         initial_length = ifelse(str_detect(initial, "#"), 0, str_count(initial, "-")+1),
+         final = str_extract(IPA, str_c(vowels, not_vowels, "*$")),
+         final_vowel = str_extract(final, vowels),
+         final = ifelse(str_detect(final, "-"), 
+                        str_remove(final, str_c(vowels, ".*?-")), 
+                        "#"),
+         final_length = ifelse(str_detect(final, "#"), 0, str_count(final, "-")+1)) %>% 
+  filter(!is.na(final_length)|
+           !is.na(initial_length)) ->
+  godoberi_ipa_in_fi
+godoberi_ipa_in_fi
 ```
+
+Давайте теперь посмотрим на количество начальных кластеров
+
+```{r}
+godoberi_ipa_in_fi %>% 
+  count(initial_length)
+```
+
+Всего три слова с инициалью в два согласных:
+
+```{r}
+godoberi_ipa_in_fi %>% 
+  filter(initial_length == 2) %>% 
+  select(lemma, definition)
+```
+
+Одни звукоподражания. Можно исключить.
+
+Давайте теперь посмотрим на количество финальных кластеров
+
+```{r}
+godoberi_ipa_in_fi %>% 
+  count(final_length)
+```
+
+Всего пять слова с инициалью в два согласных:
+
+```{r}
+godoberi_ipa_in_fi %>% 
+  filter(final_length == 2) %>% 
+  mutate(definition = str_trunc(definition, 50)) %>% 
+  select(IPA, definition)
+```
+
+Непонятно. Все кластеры содержат `r` и шумный. Но случаев мало, так что их можно отнести к исключениям (может быть они все или частично заимствованы) и принять следующую модель слога:
+
+$$CVC$$
+
+Какие звуки могут составлять финаль?
+
+```{r}
+godoberi_ipa_in_fi %>% 
+  filter(final_length == 1) %>% 
+  count(final, sort = TRUE) %>% 
+  ggplot(aes(n, fct_reorder(final, n)))+
+  geom_col()+
+  geom_text(aes(label = n), nudge_x = 7)+
+  labs(y = "")
+```
+
+Как видно, чаще всего в финали встречаются сонорные и `b`, остальные звуки встречаются крайне редко. Давайте докажем это:
+
+```{r}
+godoberi_ipa_in_fi %>% 
+  mutate(finale_cs = case_when(
+    str_detect(final, "[rlnjwm]") ~ "sonorant",
+    str_detect(final, "b") ~ "b",
+    str_detect(final, "#") ~ "open syllable",
+    TRUE ~ "obstruent"
+  )) %>% 
+  count(finale_cs, sort = TRUE) 
+```
+
+Какие звуки могут составлять инициаль?
+
+```{r, fig.height=10}
+godoberi_ipa_in_fi %>% 
+  filter(initial_length < 2) %>% 
+  count(initial, sort = TRUE) %>% 
+  ggplot(aes(n, fct_reorder(initial, n)))+
+  geom_col()+
+  geom_text(aes(label = n), nudge_x = 20)+
+  labs(y = "")
+```
+
+Мы видим, что опять лидирует `b`, а в остальном, каких-то чеких преференций не видно. Вообще, появление `b` достаточно естественно: это показатель третьего класса, который составители словаря использовали как дефолтный во всех случаях, когда в лексемах был слот для классного согласования.
+
+Теперь остался последний шаг: проверка кластеров согласных в середине слова. Если количество согласных в интервокальных кластерах не превышает 2, то тогда наша модель описывает все случаи, представлнные в нашем словаре.
+
+```{r, fig.height=10}
+godoberi_ipa %>% 
+  mutate(IPA = str_replace_all(IPA, vowels, "V"),
+         intervocal_cluster = str_extract_all(IPA, "V.*?V")) %>% 
+  unnest(cols = "intervocal_cluster") %>% 
+  mutate(intervocal_cluster = str_remove_all(intervocal_cluster, "(V-)|(-V)"),
+         intervocal_length = str_count(intervocal_cluster, "-")+1) %>% 
+  count(intervocal_cluster, intervocal_length) %>%
+  ggplot(aes(n, fct_reorder(intervocal_cluster, n)))+
+  geom_col()+
+  facet_wrap(~intervocal_length, scales = "free")
+```
+
+Как видно, наша модель не предсказывает всего 11 слов с кластерами `n-ʃ-tː` (9),  `n-ʃː-tː` (1) и `r-z-w` (1). Первые два кластера входят в слова со значением '5', а последний кластер входит в слово, связанное с звукоподражением `zwarzwasí` 'звенеть'. В связи с этим, можно считать, что наша модель описывает все слоговые структуры словаря. Этого не видно из рисунка, но большинство кластеров содержат сонорный в начале:
+
+```{r}
+godoberi_ipa %>% 
+  mutate(IPA = str_replace_all(IPA, vowels, "V"),
+         intervocal_cluster = str_extract_all(IPA, "V.*?V")) %>% 
+  unnest(cols = "intervocal_cluster") %>% 
+  mutate(intervocal_cluster = str_remove_all(intervocal_cluster, "(V-)|(-V)"),
+         intervocal_length = str_count(intervocal_cluster, "-")+1) %>% 
+  filter(intervocal_length == 2) %>% 
+  separate(intervocal_cluster, into = c("cons1", "cons2"), sep = "-") %>% 
+  mutate(cons1 = case_when(
+    str_detect(cons1, "[rlnjwm]") ~ "sonorant",
+    str_detect(cons1, "b") ~ "b",
+    TRUE ~ "obstruent"
+    ),
+    cons2 = case_when(
+    str_detect(cons2, "[rlnjwm]") ~ "sonorant",
+    str_detect(cons2, "b") ~ "b",
+    TRUE ~ "obstruent"
+    )) %>% 
+count(cons1, cons2) %>% 
+  ggplot(aes(fct_reorder(cons1, n), fill = fct_reorder(cons2, n), n))+
+  geom_col(position = "dodge")+
+  labs(x = "first consonant",
+       fill = "second consonant")
+```
+
+Как видно из графика, в большинстве случаев певрый согласный -- сонорный, а второй согласный шумный, однако бывают и другие варианты. Это согласуется со сделанным ранее наблюдением, что сонорные тяготеют к финали слога.
+
+
+
 
