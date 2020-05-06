@@ -26,6 +26,7 @@ godoberi %>%
          !str_detect(lemma, "\\S//\\S"), # многословные входы
          !str_detect(definition, "^\\(?зиб.\\)? см."), # Зибирхали
          !str_detect(definition, "звукоподр"), # Звукоподражания
+         !str_detect(definition, "возглас, которым"), # Звукоподражания
          !str_detect(definition, "^.{4} п. от ") # косвенные формы
          ) %>% 
   mutate(lemma = str_to_upper(lemma),
@@ -156,7 +157,8 @@ godoberi %>%
          IPA = str_replace_all(IPA, "-{1,}ʲ", "ʲ"),
          IPA = str_replace_all(IPA, "-{2,}", "-"),
          IPA = str_remove(IPA, "^-"),
-         IPA = str_remove(IPA, "-$")) ->
+         IPA = str_remove(IPA, "-$")) %>% 
+  select(-lemma2) ->
   godoberi_ipa
 
 godoberi_ipa %>% 
@@ -177,10 +179,28 @@ godoberi_ipa %>%
 ```{r}
 godoberi_ipa %>% 
   unnest_tokens("sound", IPA, token = stringr::str_split, pattern = "-", to_lower = FALSE) %>% 
-  count(sound, sort = TRUE)
+  count(sound, sort = TRUE) %>% 
+  DT::datatable()
 ```
 
 Полученное можно разделить на гласные и согласные, посчитать долю, которую и можно записать в стандартный чарт согласных и гласных. Также можно сделать визуализацию, где размером символа показать частотность. Теперь мы готовы перейти к анализу слоговой структуры.
 
 ## Анализ слоговой структуры
+
+```{r, eval=FALSE}
+nasalization <- "̃"
+vowels <- str_c("[auieo]", nasalization, "?ː?\\*?")
+godoberi_ipa %>% 
+  mutate(initial = str_extract(IPA, str_c("^.*?", vowels)),
+         initial_vowel = str_extract(initial, vowels),
+         initial = str_remove(initial, str_c("-?", vowels, ".*")),
+         initial = ifelse(initial == "", "#", initial),
+         initial_length = str_count(initial, "-")+1) %>% 
+  #        final = str_extract(IPA, "[auieo][^auieo]*$"),
+  #        final_vowel = str_extract(final, "[auieo]"),
+  #        final = ifelse(str_detect(final, "-"), 
+  #                       str_remove(final, "[auieo].*?-"), 
+  #                       "#")) %>% 
+  View()
+```
 
