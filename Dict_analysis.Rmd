@@ -5,13 +5,15 @@ editor_options:
   chunk_output_type: console
 ---
 
+## Приведет словарь к нужному виду
+
 ```{r,message=FALSE}
 library(tidyverse)
 godoberi <- read_csv("../godoberi_dict_v2.csv")
 godoberi
 ```
 
-Некоторые слова в словаре имеют два варианта, например `БАЖÁРИ //  БАЖЕ̄́Р`. Эти случаи следует разнести на разные строчки. Отсортируем заимствования (размечены вручную), суффиксы, слова, многословные входы из селения Зибирхали и косвенные формы.
+Некоторые слова в словаре имеют два варианта, например `БАЖÁРИ //  БАЖЕ̄́Р`. Эти случаи следует разнести на разные строчки. Отсортируем заимствования (размечены вручную), суффиксы, звукоподражания, многословные входы, слова из селения Зибирхали и косвенные формы.
 
 ```{r}
 godoberi %>% 
@@ -23,6 +25,7 @@ godoberi %>%
          !str_detect(lemma, "\\s"), # многословные входы
          !str_detect(lemma, "\\S//\\S"), # многословные входы
          !str_detect(definition, "^\\(?зиб.\\)? см."), # Зибирхали
+         !str_detect(definition, "звукоподр"), # Звукоподражания
          !str_detect(definition, "^.{4} п. от ") # косвенные формы
          ) %>% 
   mutate(lemma = str_to_upper(lemma),
@@ -62,8 +65,9 @@ godoberi %>%
          lemma2 = str_replace_all(lemma2, "Dᴴ", "ᴴD"),
          lemma2 = str_replace_all(lemma2, "Sᴴ", "ᴴS"),
          IPA = str_replace_all(lemma2, "ЛЪЛЪ", "-ɬː-"),
+         IPA = str_replace_all(IPA, "ЦIЦIВ", "-tsːʷ-"),
          IPA = str_replace_all(IPA, "ЦIЦI", "-tsː-"),
-         IPA = str_replace_all(IPA, "хIхI", "-ħː-"),
+         IPA = str_replace_all(IPA, "ХIХI", "-ħː-"),
          IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))Еᴴ", "-ʲ-ẽ-"),
          IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))Иᴴ", "-ʲ-ĩ-"),
          IPA = str_replace_all(IPA, "(?<=(Г|К|КК|КI|ХЬ))Яᴴ", "-ʲ-ã-"),
@@ -88,24 +92,43 @@ godoberi %>%
          IPA = str_replace_all(IPA, "eᴴ", "ẽ"),
          IPA = str_replace_all(IPA, "D", "ː"),
          IPA = str_replace_all(IPA, "S", "*"), # ударение обозначаю звездочкой
+         IPA = str_replace_all(IPA, "ККВ", "kːʷ"),
+         IPA = str_replace_all(IPA, "ГЪВ", "-ʁʷ-"),
          IPA = str_replace_all(IPA, "ГЪ", "-ʁ-"),
          IPA = str_replace_all(IPA, "ГЬ", "-h-"),
          IPA = str_replace_all(IPA, "ГI", "-ʕ-"),
+         IPA = str_replace_all(IPA, "ГВ", "-ɡʷ-"),
          IPA = str_replace_all(IPA, "ДЖ", "-dʒ-"),
+         IPA = str_replace_all(IPA, "КК", "kː"),
+         IPA = str_replace_all(IPA, "КВ", "kʷ"),
+         IPA = str_replace_all(IPA, "КЪВ", "-q'ʷ-"),
          IPA = str_replace_all(IPA, "КЪ", "-q'-"),
+         IPA = str_replace_all(IPA, "КЬВ", "-tɬ'ʷ-"),
          IPA = str_replace_all(IPA, "КЬ", "-tɬ'-"),
+         IPA = str_replace_all(IPA, "КIВ", "-k'ʷ-"),
          IPA = str_replace_all(IPA, "КI", "-k'-"),
          IPA = str_replace_all(IPA, "ЛЪ", "-ɬ-"),
+         IPA = str_replace_all(IPA, "ЛIВ", "-tɬʷ-"),
          IPA = str_replace_all(IPA, "ЛI", "-tɬ-"),
-         IPA = str_replace_all(IPA, "ЛI", "-tɬ-"),
+         IPA = str_replace_all(IPA, "ПI", "-p'-"),
          IPA = str_replace_all(IPA, "СС", "-sː-"),
+         IPA = str_replace_all(IPA, "ТТ", "-tː-"),
+         IPA = str_replace_all(IPA, "ТIВ", "-t'ʷ-"),
          IPA = str_replace_all(IPA, "ТI", "-t'-"),
+         IPA = str_replace_all(IPA, "ХХВ", "-χːʷ-"),
          IPA = str_replace_all(IPA, "ХХ", "-χː-"),
+         IPA = str_replace_all(IPA, "ХЪВ", "-qχʷ-"),
+         IPA = str_replace_all(IPA, "ХВ", "-χʷ-"),
          IPA = str_replace_all(IPA, "ХЪ", "-qχ-"),
+         IPA = str_replace_all(IPA, "ХЬВ", "-xʷ-"),
          IPA = str_replace_all(IPA, "ХЬ", "-x-"),
+         IPA = str_replace_all(IPA, "ХIВ", "-ħʷ-"),
          IPA = str_replace_all(IPA, "ХI", "-ħ-"),
          IPA = str_replace_all(IPA, "ЦЦ", "-tsː-"),
          IPA = str_replace_all(IPA, "ЦI", "-ts'-"),
+         IPA = str_replace_all(IPA, "ЧЧВ", "-tʃːʷ-"),
+         IPA = str_replace_all(IPA, "ЧIВ", "-tʃ'ʷ-"),
+         IPA = str_replace_all(IPA, "ЧВ", "-tʃʷ-"),
          IPA = str_replace_all(IPA, "ЧЧ", "-tʃː-"),
          IPA = str_replace_all(IPA, "ЧI", "-tʃ'-"),
          IPA = str_replace_all(IPA, "Б", "-b-"),
@@ -130,13 +153,14 @@ godoberi %>%
          IPA = str_replace_all(IPA, "Ш", "-ʃ-"),
          IPA = str_replace_all(IPA, "Щ", "-ʃː-"),
          IPA = str_replace_all(IPA, "Ъ", "-ʔ-"),
+         IPA = str_replace_all(IPA, "-{1,}ʲ", "ʲ"),
          IPA = str_replace_all(IPA, "-{2,}", "-"),
          IPA = str_remove(IPA, "^-"),
          IPA = str_remove(IPA, "-$")) ->
   godoberi_ipa
 
 godoberi_ipa %>% 
-  select(lemma, IPA)
+  select(lemma, IPA, definition)
 ```
 
 Давайте убедимся, что не осталось никаких ошибок. Посмотрим, какие звуки у нас получились:
@@ -157,3 +181,6 @@ godoberi_ipa %>%
 ```
 
 Полученное можно разделить на гласные и согласные, посчитать долю, которую и можно записать в стандартный чарт согласных и гласных. Также можно сделать визуализацию, где размером символа показать частотность. Теперь мы готовы перейти к анализу слоговой структуры.
+
+## Анализ слоговой структуры
+
